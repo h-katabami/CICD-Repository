@@ -1,0 +1,92 @@
+name: Reusable Terraform Deploy
+
+on:
+  workflow_call:
+    inputs:
+      project_name:
+        required: true
+        type: string
+      tf_env_dir:
+        required: true
+        type: string
+      aws_region:
+        required: true
+        type: string
+      branch_env:
+        required: true
+        type: string
+    secrets:
+      aws_role_arn:
+        required: true
+
+env:
+  TF_IN_AUTOMATION: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Build Lambda ZIP
+        run: |
+          LAMBDA_NAME="TwilioCustomParts-${{ inputs.project_name }}"
+          PACKAGE_DIR="build/${LAMBDA_NAME}"
+          ZIP_PATH="build/${LAMBDA_NAME}.zip"
+
+          mkdir -p "$PACKAGE_DIR"
+          cp "lambda/${LAMBDA_NAME}/lambda_function.py" "$PACKAGE_DIR/lambda_function.py"
+          cp -r common/ "$PACKAGE_DIR/common"
+
+          pip install --quiet pipreqs
+          python -m pipreqs.pipreqs "$PACKAGE_DIR" --force --encoding utf-8 --savepath "$PACKAGE_DIR/__auto_requirements.txt" || true
+
+          if [ -s "$PACKAGE_DIR/__auto_requirements.txt" ]; then
+            pip install -r "$PACKAGE_DIR/__auto_requirements.txt" -t "$PACKAGE_DIR" --quiet
+          else
+            echo "No external dependencies found."
+          fi
+
+          find "$PACKAGE_DIR" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+          find "$PACKAGE_DIR" -name "*.pyc" -delete 2>/dev/null || true
+          cd "$PACKAGE_DIR" && zip -r "../../${LAMBDA_NAME}.zip" . && cd -
+          rm -rf "$PACKAGE_DIR"
+          echo "Built: ${ZIP_PATH}"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.aws_role_arn }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.7"
+
+      - name: Terraform Init
+        working-directory: ${{ inputs.tf_env_dir }}
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="key=state/${{ github.event.repository.name }}/${{ inputs.branch_env }}/terraform.tfstate" \
+            -backend-config="region=${{ inputs.aws_region }}" \
+            -backend-config="encrypt=true"
+
+      - name: Terraform Plan
+        working-directory: ${{ inputs.tf_env_dir }}
+        run: terraform plan -var-file="terraform.tfvars"
+
+      - name: Terraform Apply
+        working-directory: ${{ inputs.tf_env_dir }}
+        run: terraform apply -auto-approve -var-file="terraform.tfvars"

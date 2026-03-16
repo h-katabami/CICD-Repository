@@ -1,0 +1,8 @@
+aws_region        = "ap-northeast-1"
+state_bucket_name = "terraform-state-<account-id>"
+
+github_org  = "<github-org-or-user>"
+github_repo = "twilio-flow-custom-parts-kawagoe-city"
+
+deploy_role_name_dev  = "gha-terraform-deploy-dev"
+deploy_role_name_prod = "gha-terraform-deploy-prod"
