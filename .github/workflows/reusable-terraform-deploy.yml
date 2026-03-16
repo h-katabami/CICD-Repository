@@ -3,7 +3,7 @@ name: Reusable Terraform Deploy
 on:
   workflow_call:
     inputs:
-      project_name:
+      project_suffix:
         required: true
         type: string
       tf_env_dir:
@@ -40,7 +40,7 @@ jobs:
 
       - name: Build Lambda ZIP
         run: |
-          LAMBDA_NAME="TwilioCustomParts-${{ inputs.project_name }}"
+          LAMBDA_NAME="TwilioCustomParts-${{ inputs.project_suffix }}"
           PACKAGE_DIR="build/${LAMBDA_NAME}"
           ZIP_PATH="build/${LAMBDA_NAME}.zip"
 
