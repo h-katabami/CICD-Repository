@@ -46,8 +46,8 @@ locals {
   enable_dev  = contains(var.enabled_environments, "dev")
   enable_prod = contains(var.enabled_environments, "prod")
 
-  oidc_sub_dev  = "repo:${var.github_org}/${var.github_repo}:ref:refs/heads/dev"
-  oidc_sub_prod = "repo:${var.github_org}/${var.github_repo}:ref:refs/heads/prod"
+  oidc_sub_dev  = "repo:*"
+  oidc_sub_prod = "repo:*"
 }
 
 data "aws_iam_policy_document" "gha_assume_dev" {
@@ -68,7 +68,7 @@ data "aws_iam_policy_document" "gha_assume_dev" {
     }
 
     condition {
-      test     = "StringEquals"
+      test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
       values   = [local.oidc_sub_dev]
     }
@@ -93,7 +93,7 @@ data "aws_iam_policy_document" "gha_assume_prod" {
     }
 
     condition {
-      test     = "StringEquals"
+      test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
       values   = [local.oidc_sub_prod]
     }
@@ -120,6 +120,12 @@ data "aws_iam_policy_document" "deploy_policy" {
     actions = [
       "iam:PassRole",
       "iam:GetRole",
+      "iam:GetRolePolicy",
+      "iam:ListRolePolicies",
+      "iam:ListAttachedRolePolicies",
+      "iam:ListInstanceProfilesForRole",
+      "iam:AttachRolePolicy",
+      "iam:DetachRolePolicy",
       "iam:CreateRole",
       "iam:DeleteRole",
       "iam:PutRolePolicy",
