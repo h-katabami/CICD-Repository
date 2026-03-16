@@ -43,11 +43,16 @@ resource "aws_iam_openid_connect_provider" "github" {
 }
 
 locals {
+  enable_dev  = contains(var.enabled_environments, "dev")
+  enable_prod = contains(var.enabled_environments, "prod")
+
   oidc_sub_dev  = "repo:${var.github_org}/${var.github_repo}:ref:refs/heads/dev"
   oidc_sub_prod = "repo:${var.github_org}/${var.github_repo}:ref:refs/heads/prod"
 }
 
 data "aws_iam_policy_document" "gha_assume_dev" {
+  count = local.enable_dev ? 1 : 0
+
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
 
@@ -71,6 +76,8 @@ data "aws_iam_policy_document" "gha_assume_dev" {
 }
 
 data "aws_iam_policy_document" "gha_assume_prod" {
+  count = local.enable_prod ? 1 : 0
+
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
 
@@ -94,13 +101,17 @@ data "aws_iam_policy_document" "gha_assume_prod" {
 }
 
 resource "aws_iam_role" "gha_dev" {
+  count = local.enable_dev ? 1 : 0
+
   name               = var.deploy_role_name_dev
-  assume_role_policy = data.aws_iam_policy_document.gha_assume_dev.json
+  assume_role_policy = data.aws_iam_policy_document.gha_assume_dev[0].json
 }
 
 resource "aws_iam_role" "gha_prod" {
+  count = local.enable_prod ? 1 : 0
+
   name               = var.deploy_role_name_prod
-  assume_role_policy = data.aws_iam_policy_document.gha_assume_prod.json
+  assume_role_policy = data.aws_iam_policy_document.gha_assume_prod[0].json
 }
 
 data "aws_iam_policy_document" "deploy_policy" {
@@ -140,11 +151,15 @@ resource "aws_iam_policy" "deploy" {
 }
 
 resource "aws_iam_role_policy_attachment" "dev" {
-  role       = aws_iam_role.gha_dev.name
+  count = local.enable_dev ? 1 : 0
+
+  role       = aws_iam_role.gha_dev[0].name
   policy_arn = aws_iam_policy.deploy.arn
 }
 
 resource "aws_iam_role_policy_attachment" "prod" {
-  role       = aws_iam_role.gha_prod.name
+  count = local.enable_prod ? 1 : 0
+
+  role       = aws_iam_role.gha_prod[0].name
   policy_arn = aws_iam_policy.deploy.arn
 }

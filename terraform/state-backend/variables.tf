@@ -18,6 +18,17 @@ variable "github_repo" {
   description = "GitHub repository name"
 }
 
+variable "enabled_environments" {
+  type        = set(string)
+  description = "Deployment environments to provision OIDC roles for"
+  default     = ["dev"]
+
+  validation {
+    condition     = alltrue([for env in var.enabled_environments : contains(["dev", "prod"], env)])
+    error_message = "enabled_environments must contain only dev and/or prod."
+  }
+}
+
 variable "deploy_role_name_dev" {
   type        = string
   description = "IAM role name for dev deployment"
