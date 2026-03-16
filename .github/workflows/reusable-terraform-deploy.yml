@@ -59,7 +59,7 @@ jobs:
 
           find "$PACKAGE_DIR" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
           find "$PACKAGE_DIR" -name "*.pyc" -delete 2>/dev/null || true
-          cd "$PACKAGE_DIR" && zip -r "../../${LAMBDA_NAME}.zip" . && cd -
+          cd "$PACKAGE_DIR" && zip -r "../${LAMBDA_NAME}.zip" . && cd -
           rm -rf "$PACKAGE_DIR"
           echo "Built: ${ZIP_PATH}"
 
