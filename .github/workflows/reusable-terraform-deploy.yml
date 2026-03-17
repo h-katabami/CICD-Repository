@@ -40,28 +40,41 @@ jobs:
 
       - name: Build Lambda ZIP
         run: |
-          LAMBDA_NAME="TwilioCustomParts-${{ inputs.project_suffix }}"
-          PACKAGE_DIR="build/${LAMBDA_NAME}"
-          ZIP_PATH="build/${LAMBDA_NAME}.zip"
-
-          mkdir -p "$PACKAGE_DIR"
-          cp "lambda/${LAMBDA_NAME}/lambda_function.py" "$PACKAGE_DIR/lambda_function.py"
-          cp -r common/ "$PACKAGE_DIR/common"
-
-          pip install --quiet pipreqs
-          python -m pipreqs.pipreqs "$PACKAGE_DIR" --force --encoding utf-8 --savepath "$PACKAGE_DIR/__auto_requirements.txt" || true
-
-          if [ -s "$PACKAGE_DIR/__auto_requirements.txt" ]; then
-            pip install -r "$PACKAGE_DIR/__auto_requirements.txt" -t "$PACKAGE_DIR" --quiet
-          else
-            echo "No external dependencies found."
+          if ! ls lambda/*/ >/dev/null 2>&1; then
+            echo "No Lambda directories found under lambda/."
+            exit 1
           fi
 
-          find "$PACKAGE_DIR" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-          find "$PACKAGE_DIR" -name "*.pyc" -delete 2>/dev/null || true
-          cd "$PACKAGE_DIR" && zip -r "../${LAMBDA_NAME}.zip" . && cd -
-          rm -rf "$PACKAGE_DIR"
-          echo "Built: ${ZIP_PATH}"
+          pip install --quiet pipreqs
+
+          for LAMBDA_DIR in lambda/*/; do
+            LAMBDA_NAME="$(basename "$LAMBDA_DIR")"
+            PACKAGE_DIR="build/${LAMBDA_NAME}"
+            ZIP_PATH="build/${LAMBDA_NAME}.zip"
+
+            mkdir -p "$PACKAGE_DIR"
+            cp -r "${LAMBDA_DIR}". "$PACKAGE_DIR/"
+
+            if [ -d common ]; then
+              cp -r common "$PACKAGE_DIR/common"
+            fi
+
+            python -m pipreqs.pipreqs "$PACKAGE_DIR" --force --encoding utf-8 --savepath "$PACKAGE_DIR/__auto_requirements.txt" || true
+
+            if [ -s "$PACKAGE_DIR/__auto_requirements.txt" ]; then
+              pip install -r "$PACKAGE_DIR/__auto_requirements.txt" -t "$PACKAGE_DIR" --quiet
+            else
+              echo "No external dependencies found for ${LAMBDA_NAME}."
+            fi
+
+            find "$PACKAGE_DIR" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+            find "$PACKAGE_DIR" -name "*.pyc" -delete 2>/dev/null || true
+            rm -f "$PACKAGE_DIR/__auto_requirements.txt"
+            cd "$PACKAGE_DIR" && zip -r "../${LAMBDA_NAME}.zip" . && cd -
+            rm -rf "$PACKAGE_DIR"
+
+            echo "Built: ${ZIP_PATH}"
+          done
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
