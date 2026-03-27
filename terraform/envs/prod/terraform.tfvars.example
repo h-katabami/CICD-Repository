@@ -1,0 +1,11 @@
+aws_region        = "ap-northeast-1"
+aws_profile       = "prod"
+state_bucket_name = "cicd-state-prod"
+
+github_org  = "<github-org-or-user>"
+github_repo = "twilio-flow-custom-parts-kawagoe-city"
+
+deploy_role_name   = "gha-terraform-deploy-prod"
+deploy_policy_name = "gha-terraform-deploy-policy-prod"
+create_github_oidc_provider = false
+# oidc_sub         = "repo:<github-org-or-user>/twilio-flow-custom-parts-kawagoe-city:*"
