@@ -3,9 +3,16 @@ variable "aws_region" {
   description = "AWS region"
 }
 
-variable "state_bucket_name" {
+variable "state_bucket_name_dev" {
   type        = string
-  description = "Terraform state bucket name"
+  description = "Terraform state bucket name for dev"
+  default     = null
+}
+
+variable "state_bucket_name_prod" {
+  type        = string
+  description = "Terraform state bucket name for prod"
+  default     = null
 }
 
 variable "github_org" {

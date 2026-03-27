@@ -2,19 +2,22 @@ provider "aws" {
   region = var.aws_region
 }
 
-resource "aws_s3_bucket" "tf_state" {
-  bucket = var.state_bucket_name
+resource "aws_s3_bucket" "tf_state_dev" {
+  count  = local.enable_dev ? 1 : 0
+  bucket = var.state_bucket_name_dev
 }
 
-resource "aws_s3_bucket_versioning" "tf_state" {
-  bucket = aws_s3_bucket.tf_state.id
+resource "aws_s3_bucket_versioning" "tf_state_dev" {
+  count  = local.enable_dev ? 1 : 0
+  bucket = aws_s3_bucket.tf_state_dev[0].id
   versioning_configuration {
     status = "Enabled"
   }
 }
 
-resource "aws_s3_bucket_server_side_encryption_configuration" "tf_state" {
-  bucket = aws_s3_bucket.tf_state.id
+resource "aws_s3_bucket_server_side_encryption_configuration" "tf_state_dev" {
+  count  = local.enable_dev ? 1 : 0
+  bucket = aws_s3_bucket.tf_state_dev[0].id
 
   rule {
     apply_server_side_encryption_by_default {
@@ -23,8 +26,43 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "tf_state" {
   }
 }
 
-resource "aws_s3_bucket_public_access_block" "tf_state" {
-  bucket = aws_s3_bucket.tf_state.id
+resource "aws_s3_bucket_public_access_block" "tf_state_dev" {
+  count  = local.enable_dev ? 1 : 0
+  bucket = aws_s3_bucket.tf_state_dev[0].id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket" "tf_state_prod" {
+  count  = local.enable_prod ? 1 : 0
+  bucket = var.state_bucket_name_prod
+}
+
+resource "aws_s3_bucket_versioning" "tf_state_prod" {
+  count  = local.enable_prod ? 1 : 0
+  bucket = aws_s3_bucket.tf_state_prod[0].id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "tf_state_prod" {
+  count  = local.enable_prod ? 1 : 0
+  bucket = aws_s3_bucket.tf_state_prod[0].id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "tf_state_prod" {
+  count  = local.enable_prod ? 1 : 0
+  bucket = aws_s3_bucket.tf_state_prod[0].id
 
   block_public_acls       = true
   block_public_policy     = true
